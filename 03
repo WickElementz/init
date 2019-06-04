@@ -1,0 +1,102 @@
+#!/bin/bash
+COL=$(tput cols)
+if [ $# = 1 ]
+then
+	API_KEY=$(echo "RGAPI-44c0af75-acee-416b-89d6-ebd477ea2941")
+	NAME=$(echo "$1" | sed 's/ /%20/g')
+	VAR=$(curl -s https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/$NAME?api_key=$API_KEY)
+	SUMMONER_ID=$(echo $VAR | cut -d '"' -f 4)
+	ACCOUNT_ID=$(echo $VAR | cut -d '"' -f 8)
+	if [ "$SUMMONER_ID" = "message" ]
+	then
+		echo "Summoner not found" | fmt -c -w $COL
+	else
+		SUMMONER_INFO=$(curl -s https://euw1.api.riotgames.com/lol/league/v4/positions/by-summoner/$SUMMONER_ID?api_key=$API_KEY | sed 's/",/\\n/g' | sed 's/"//g')
+		SUMMONER_LEVEL=$(echo $VAR | cut -d '"' -f23 | sed 's/://g' | sed 's/}//g')
+		RANKED_SOLO=$(echo $SUMMONER_INFO | grep -A6 "RANKED_SOLO")
+		SOLO_RANK=$(echo $RANKED_SOLO | cut -d ':' -f4 | sed 's/ rank//g')
+		SOLO_DIV=$(echo $RANKED_SOLO | cut -d ':' -f5 | sed 's/ summonerId//g')
+		SOLO_LP=$(echo $RANKED_SOLO | cut -d ':' -f8 | sed 's/,wins//g')
+		SOLO_WIN=$(echo $RANKED_SOLO | cut -d ':' -f9 | sed 's/,losses//g')
+		SOLO_LOSE=$(echo $RANKED_SOLO | cut -d ':' -f10 | sed 's/,veteran//g')
+		RANKED_FLEX=$(echo $SUMMONER_INFO | grep -A6 "RANKED_FLEX_SR")
+		FLEX_RANK=$(echo $RANKED_FLEX | cut -d ':' -f4 | sed 's/ rank//g')
+		FLEX_DIV=$(echo $RANKED_FLEX | cut -d ':' -f5 | sed 's/ summonerId//g')
+		FLEX_LP=$(echo $RANKED_FLEX | cut -d ':' -f8 | sed 's/,wins//g')
+		FLEX_WIN=$(echo $RANKED_FLEX | cut -d ':' -f9 | sed 's/,losses//g')
+		FLEX_LOSE=$(echo $RANKED_FLEX | cut -d ':' -f10 | sed 's/,veteran//g')
+		echo "|--------------|
+		|Summoner  Info|
+		|--------------|
+		Summoner Level: $SUMMONER_LEVEL" | fmt -c -w $COL
+		echo "|--------------|
+		|Solo/Duo Queue|
+		|--------------|" | fmt -c -w $COL
+		if [ "$RANKED_SOLO" = "" ]
+		then
+			echo "$1 does not have a rank yet in SoloQ/DuoQ" | fmt -c -w $COL
+		else
+			echo "$1 is $SOLO_RANK $SOLO_DIV and has $SOLO_LP LP with $SOLO_WIN wins and $SOLO_LOSE losses" | fmt -c -w $COL
+		fi
+		echo "|------------|
+		|Ranked  Flex|
+		|------------|" | fmt -c -w $COL
+		if [ "$RANKED_FLEX" = "" ]
+		then
+			echo "$1 does not have a rank yet in Flex" | fmt -c -w $COL
+		else
+			echo "$1 is $FLEX_RANK $FLEX_DIV and has $FLEX_LP LP with $FLEX_WIN wins and $FLEX_LOSE losses" | fmt -c -w $COL
+		fi
+		GAME=$(curl -s https://euw1.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/$ID?api_key=$API_KEY | sed 's/",/\\n/g' | sed 's/"//g')
+		GAME_TYPE=$(echo "$GAME" | grep "gameId" | cut -d ',' -f 2 | cut -d ':' -f 2)
+		echo "|------------|
+		|Game  status|
+		|------------|" | fmt -c -w $COL
+		if [ "$GAME_TYPE" = "10" ]
+		then
+			echo "$1 is actually playing in Twisted Treeline" | fmt -c -w $COL
+		elif [ "$GAME_TYPE" = "11" ]
+		then
+			echo "$1 is actually playing in Summoner's Rift" | fmt -c -w $COL
+		elif [ "$GAME_TYPE" = "12" ] || [ "$GAME_TYPE" = "14" ]
+		then
+			echo "$1 is actually playing in Howling Abyss" | fmt -c -w $COL
+		else
+		echo "$1 is not actually in game" | fmt -c -w $COL
+		fi
+		HISTORY=$(curl -s https://euw1.api.riotgames.com/lol/match/v4/matchlists/by-account/$ACCOUNT_ID?api_key=$API_KEY | sed 's/",/\\n/g' | sed 's/"//g')
+		x=1
+		echo "|--------------|
+		|PLAYER HISTORY|
+		|--------------|" | fmt -c -w $COL
+		until test $x -eq 6
+		do
+			y=1
+			z=6
+			MATCH_ID=$(echo "$HISTORY" | grep "gameId" | sed -n $x'p' | cut -d ":" -f 2 | cut -d "," -f 1)
+			GAME_INFO=$(curl -s https://euw1.api.riotgames.com/lol/match/v4/matches/$MATCH_ID?api_key=$API_KEY | sed 's/",/\\n/g' | sed 's/"//g')
+   		 	echo "|------|
+			|GAME $x|
+			|------|" | fmt -c -w $COL
+			echo "---------			--------
+			Blue Team			Red Team
+			---------			--------" | fmt -c -w $COL
+			until test $y -eq 6
+			do
+				BLUE_TEAM_SUMMONER=$(echo -e "$GAME_INFO" | grep "summonerName" | cut -d ':' -f 2 | sed -n $y'p')
+				y=$(( $y + 1))
+				RED_TEAM_SUMMONER=$(echo -e "$GAME_INFO" | grep "summonerName" | cut -d ':' -f 2 | sed -n $z'p')
+				z=$(( $y + 5))
+				if [ "$y" = 4 ]
+				then
+					printf "%-20s vs %20s\n" "$BLUE_TEAM_SUMMONER" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
+				else
+					printf "%-20s    %20s\n" "$BLUE_TEAM_SUMMONER" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
+				fi
+			done
+			x=$(( $x + 1 ))
+		done
+	fi
+else
+	echo "Please type a summoner name" | fmt -c -w $COL
+fi
