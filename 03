@@ -36,7 +36,7 @@ then
 		else
 			echo "$1 is $SOLO_RANK $SOLO_DIV and has $SOLO_LP LP with $SOLO_WIN wins and $SOLO_LOSE losses" | fmt -c -w $COL
 		fi
-		echo "|--------------|\n|Ranked    Flex|\n|--------------|" | fmt -c -w $COL
+		echo "|--------------|\n| Ranked  Flex |\n|--------------|" | fmt -c -w $COL
 		if [ "$RANKED_FLEX" = "" ]
 		then
 			echo "$1 does not have a rank yet in Flex" | fmt -c -w $COL
@@ -45,7 +45,7 @@ then
 		fi
 		GAME=$(curl -s https://euw1.api.riotgames.com/lol/spectator/v4/active-games/by-summoner/$SUMMONER_ID?api_key=$API_KEY | sed 's/",/\\n/g' | sed 's/"//g')
 		GAME_TYPE=$(echo -e "$GAME" | grep "gameId" | cut -d ',' -f 2 | cut -d ':' -f 2)
-		echo "|--------------|\n|Game    status|\n|--------------|" | fmt -c -w $COL
+		echo "|--------------|\n| Game  status |\n|--------------|" | fmt -c -w $COL
 		if [ "$GAME_TYPE" = "10" ]
 		then
 			echo "$1 is actually playing in Twisted Treeline" | fmt -c -w $COL
@@ -70,15 +70,22 @@ then
 			GAME_INFO=$(echo -e "$MATCH_ID_INFO" | sed 's/{/\\n/g' | sed 's/"//g')
 			GAME_INFO_SUMMONER=$(echo -e "$GAME_INFO" | grep "summonerName" | cut -d ':' -f 2)
 			GAME_INFO_CHAMPION=$(echo -e "$GAME_INFO" | grep -A 4 "participantId" | grep "championId" | cut -d ':' -f 2)
-  		 	echo "|------|\n|GAME $x|\n|------|" | fmt -c -w $COL
-			echo "---------			--------\nBlue Team			Red Team\n---------			--------" | fmt -c -w $COL
+			TEAM_WIN=$(echo "$GAME_INFO" | grep "win" | cut -d ':' -f 2 | sed -n '1p')
+  		 	if [ "$TEAM_WIN" = "Win" ]
+			then
+				echo "|--------------|\n|    GAME $x    |\n|Blue Team Wins|\n|--------------|" | fmt -c -w $COL
+				echo "---------			 --------\nBlue Team	      		 Red Team\n---------			 --------" | fmt -c -w $COL
+			else
+				echo "|-------------|\n|   GAME  $x   |\n|Red Team Wins|\n|-------------|" | fmt -c -w $COL
+				echo "---------			 --------\nBlue Team	      		 Red Team\n---------			 --------" | fmt -c -w $COL
+			fi
 			echo "--------              --------            --------              --------
 			Summoner              Champion            Champion              Summoner
 			--------              --------            --------              --------" | fmt -c -w $COL
 			until test $i -eq 6
-			do
+			do	
 				BLUE_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $i'p')
-    			RED_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $j'p')
+				RED_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $j'p')
     			BLUE_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $i'p')
     			RED_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $j'p')
   				BLUE_TEAM_CHAMPION=$(echo "$DATA_CHAMPION_CUT" | grep -A 1 "key:$BLUE_TEAM_CHAMPION_ID" | cut -d ':' -f 2 | sed -n '2p')
