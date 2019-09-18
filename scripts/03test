@@ -60,7 +60,7 @@ then
 		HISTORY=$(curl -s https://euw1.api.riotgames.com/lol/match/v4/matchlists/by-account/$ACCOUNT_ID?api_key=$API_KEY | sed 's/",/\\n/g' | sed 's/"//g')
 		x=1
 		echo "|--------------|\n|PLAYER HISTORY|\n|--------------|" | fmt -c -w $COL
-		until test $x -eq 50
+		until test $x -eq 5
 		do
 			i=1
 			j=6

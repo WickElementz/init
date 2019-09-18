@@ -1,1 +1,0 @@
-netstat -nr | grep 'default' | cut -d ' ' -f13 | sed 2d
