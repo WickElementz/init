@@ -2,13 +2,12 @@
 COL=$(tput cols)
 if [ $# = 1 ]
 then
-	API_KEY=$(echo "RGAPI-18e30ffa-1d87-4f77-b1b6-68e6863739ff")
+	API_KEY=$(echo "RGAPI-a08dac40-964a-4bf8-9c14-be23e3ae5029")
 	NAME=$(echo "$1" | sed 's/ /%20/g')
 	VAR=$(curl -s https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/$NAME?api_key=$API_KEY)
 	SUMMONER_ID=$(echo $VAR | cut -d '"' -f 4)
 	ACCOUNT_ID=$(echo $VAR | cut -d '"' -f 8)
-	DATA_CHAMPION=$(curl -s http://ddragon.leagueoflegends.com/cdn/9.3.1/data/en_US/champion.json | sed 's/",/\\n/g' | sed 's/"//g')
-	DATA_CHAMPION_CUT=$(echo -e "$DATA_CHAMPION" | grep -A 1 "key:")
+	DATA_CHAMPION=$(curl -s http://ddragon.leagueoflegends.com/cdn/9.3.1/data/en_US/champion.json | sed 's/,/\\n/g')
 	if [ "$SUMMONER_ID" = "message" ]
 	then
 		echo "Summoner not found" | fmt -c -w $COL
@@ -61,16 +60,18 @@ then
 		HISTORY=$(curl -s https://euw1.api.riotgames.com/lol/match/v4/matchlists/by-account/$ACCOUNT_ID?api_key=$API_KEY | sed 's/",/\\n/g' | sed 's/"//g')
 		x=1
 		echo "|--------------|\n|PLAYER HISTORY|\n|--------------|" | fmt -c -w $COL
-		until test $x -eq 6
+		until test $x -eq 50
 		do
 			i=1
 			j=6
+			k=4
 			MATCH_ID=$(echo "$HISTORY" | grep "gameId" | sed -n $x'p' | cut -d ":" -f 2 | cut -d "," -f 1)
 			MATCH_ID_INFO=$(curl -s https://euw1.api.riotgames.com/lol/match/v4/matches/$MATCH_ID?api_key=$API_KEY | sed 's/,/\\n/g' | sed 's/"//g')
 			GAME_INFO=$(echo -e "$MATCH_ID_INFO" | sed 's/{/\\n/g' | sed 's/"//g')
 			GAME_INFO_SUMMONER=$(echo -e "$GAME_INFO" | grep "summonerName" | cut -d ':' -f 2)
 			GAME_INFO_CHAMPION=$(echo -e "$GAME_INFO" | grep -A 4 "participantId" | grep "championId" | cut -d ':' -f 2)
 			TEAM_WIN=$(echo "$GAME_INFO" | grep "win" | cut -d ':' -f 2 | sed -n '1p')
+			MAP_ID=$(echo "$GAME_INFO" | grep "mapId" | cut -d ':' -f 2)
   		 	if [ "$TEAM_WIN" = "Win" ]
 			then
 				echo "|--------------|\n|    GAME $x    |\n|Blue Team Wins|\n|--------------|" | fmt -c -w $COL
@@ -82,30 +83,58 @@ then
 			echo "--------              --------            --------              --------
 			Summoner              Champion            Champion              Summoner
 			--------              --------            --------              --------" | fmt -c -w $COL
-			until test $i -eq 6
-			do	
-				BLUE_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $i'p')
-				RED_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $j'p')
-    			BLUE_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $i'p')
-    			RED_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $j'p')
-  				BLUE_TEAM_CHAMPION=$(echo "$DATA_CHAMPION_CUT" | grep -A 1 "key:$BLUE_TEAM_CHAMPION_ID" | cut -d ':' -f 2 | sed -n '2p')
-    			RED_TEAM_CHAMPION=$(echo "$DATA_CHAMPION_CUT" | grep -A 1 "$RED_TEAM_CHAMPION_ID" | cut -d ':' -f 2 | sed -n '2p')
-				if [ "$BLUE_TEAM_CHAMPION_ID" = "350" ]
-				then
-					BLUE_TEAM_CHAMPION=$(echo "Yuumi")
-				elif [ "$RED_TEAM_CHAMPION_ID" = "350" ]
-				then
-					RED_TEAM_CHAMPION=$(echo "Yuumi")
-				fi
-				if [ "$i" = 3 ]
-				then
-					printf "%-16s      %-12s vs %12s      %16s\n" "$BLUE_TEAM_SUMMONER" "$BLUE_TEAM_CHAMPION" "$RED_TEAM_CHAMPION" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
-				else
-					printf "%-16s      %-12s    %12s      %16s\n" "$BLUE_TEAM_SUMMONER" "$BLUE_TEAM_CHAMPION" "$RED_TEAM_CHAMPION" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
-				fi
-				i=$(( $i + 1))
-				j=$(( $j + 1))
-			done
+			if [ "$MAP_ID" = "10" ]
+			then
+				until test $i -eq 4
+				do	
+					BLUE_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $i'p')
+					RED_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $k'p')
+    				BLUE_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $i'p')
+    				RED_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $k'p')
+  					BLUE_TEAM_CHAMPION=$(echo "$DATA_CHAMPION" | grep -A 1 ":\"$BLUE_TEAM_CHAMPION_ID\"" | grep "name" | cut -d ':' -f 2 | sed 's/"//g')
+    				RED_TEAM_CHAMPION=$(echo "$DATA_CHAMPION" | grep -A 1 ":\"$RED_TEAM_CHAMPION_ID\"" | grep "name" | cut -d ':' -f 2 | sed 's/"//g')
+					if [ "$BLUE_TEAM_CHAMPION_ID" = "350" ]
+					then
+						BLUE_TEAM_CHAMPION=$(echo "Yuumi")
+					elif [ "$RED_TEAM_CHAMPION_ID" = "350" ]
+					then
+						RED_TEAM_CHAMPION=$(echo "Yuumi")
+					fi
+					if [ "$i" = 2 ]
+					then
+						printf "%-16s      %-12s vs %12s      %16s\n" "$BLUE_TEAM_SUMMONER" "$BLUE_TEAM_CHAMPION" "$RED_TEAM_CHAMPION" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
+					else
+						printf "%-16s      %-12s    %12s      %16s\n" "$BLUE_TEAM_SUMMONER" "$BLUE_TEAM_CHAMPION" "$RED_TEAM_CHAMPION" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
+					fi
+					i=$(( $i + 1))
+					k=$(( $k + 1))
+				done
+			else
+				until test $i -eq 6
+				do	
+					BLUE_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $i'p')
+					RED_TEAM_SUMMONER=$(echo "$GAME_INFO_SUMMONER" | sed -n $j'p')
+    				BLUE_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $i'p')
+    				RED_TEAM_CHAMPION_ID=$(echo "$GAME_INFO_CHAMPION" | sed -n $j'p')
+  					BLUE_TEAM_CHAMPION=$(echo "$DATA_CHAMPION" | grep -A 1 ":\"$BLUE_TEAM_CHAMPION_ID\"" | grep "name" | cut -d ':' -f 2 | sed 's/"//g')
+    				RED_TEAM_CHAMPION=$(echo "$DATA_CHAMPION" | grep -A 1 ":\"$RED_TEAM_CHAMPION_ID\"" | grep "name" | cut -d ':' -f 2 | sed 's/"//g')
+					if [ "$BLUE_TEAM_CHAMPION_ID" = "350" ]
+					then
+						BLUE_TEAM_CHAMPION=$(echo "Yuumi")
+					elif [ "$RED_TEAM_CHAMPION_ID" = "350" ]
+					then
+						RED_TEAM_CHAMPION=$(echo "Yuumi")
+					fi
+					if [ "$i" = 3 ]
+					then
+						printf "%-16s      %-12s vs %12s      %16s\n" "$BLUE_TEAM_SUMMONER" "$BLUE_TEAM_CHAMPION" "$RED_TEAM_CHAMPION" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
+					else
+						printf "%-16s      %-12s    %12s      %16s\n" "$BLUE_TEAM_SUMMONER" "$BLUE_TEAM_CHAMPION" "$RED_TEAM_CHAMPION" "$RED_TEAM_SUMMONER" | fmt -c -w $COL
+					fi
+					i=$(( $i + 1))
+					j=$(( $j + 1))
+				done
+			fi
 			x=$(( $x + 1 ))
 		done
 	fi
