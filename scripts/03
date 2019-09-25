@@ -11,10 +11,10 @@ else
 	IDS=$(curl -s https://api.themoviedb.org/3/genre/movie/list?api_key=658767fbd68eea723024c351086861e5)
 	IDS_G=$(echo $IDS | sed 's/{/\\n/g' | sed 's/"/ /g' | sed 's/ },//g' | sed 's/ id ://g' | sed 's/, name //g')
 	GREP=$(echo -e "$VAR\n" | sed 's/,"/\\n/g' | sed 's/"//g')
-	echo $GREP | grep -m 1 "title:" | sed 's/:/:/' | sed 's/:/:		/' | sed 's/title/Titre VF/'
+	echo $GREP | grep -m 1 "original_title:" | sed 's/original_title/Titre VO/' | sed 's/:/: 		/'
+	echo $GREP | grep -A 2 "original_title" | sed -n 3p | sed 's/:/:/' | sed 's/:/:		/' | sed 's/title/Titre VF/'
 	RATE=$(echo $GREP | grep -m 1 "vote_average:" | sed 's/vote_average/Note (imdb)/' | sed 's/:/: 		/')
 	echo "$RATE/10"
-	echo $GREP | grep -m 1 "original_title:" | sed 's/original_title/Titre VO/' | sed 's/:/: 		/'
 	echo $GREP | grep -m 1 "release_date:" | sed 's/release_date/Date de sortie/' | cut -d '}' -f1 | sed 's/:/:		/'
 	IDS_V=$(echo $GREP | grep -m 1 "genre_ids:" | sed 's/genre_ids://' | cut -d '}' -f1 | sed 's/\[//' | sed 's/\]//' | sed 's/,/ /g')
 	GENRE=$(echo "")
